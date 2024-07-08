@@ -1,0 +1,52 @@
+services:
+  postgres:
+    image: postgres:17beta2-alpine3.20
+    container_name: postgres_service
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: mypostgresDB
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7.4-rc2-alpine3.20
+    container_name: redis_service
+    ports:
+      - "6379:6379"
+
+  app:
+    build: .
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    command: npm run dev
+    ports:
+      - "3000:3000"
+
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      POSTGRES_URL: postgres://postgres:postgres@postgres:5432/mypostgresDB
+      REDIS_URL: redis://redis:6379
+
+  nginx:
+    image: nginx:1.25-alpine3.17
+    container_name: nginx-container
+    ports:
+      - "4000:4000"
+
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./html:/usr/share/nginx/html
+    restart: always
+
+networks:
+  app-network:
+    driver: bridge
+volumes:
+  pg-data:
+    driver: local
